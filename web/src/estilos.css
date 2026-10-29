@@ -16,6 +16,7 @@
   --rosa: #e0366e;
   --verde: #2ec27e;
   --turquesa: #35c2c7;
+  --turquesa-oscuro: #1d4e52;
   --radio: 16px;
   /* adornos.js mete aqui la hilera de petalos */
   --petalos: none;
@@ -270,7 +271,7 @@ main {
   position: relative;
   width: 7.4rem;
   padding: 0.5rem 0.45rem 0.6rem;
-  background: var(--morado-claro);
+  background: var(--turquesa-oscuro);
   border: 2px solid transparent;
   border-radius: 13px;
   text-align: center;
