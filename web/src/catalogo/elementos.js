@@ -76,6 +76,13 @@ export const TIPOS = {
     pideTexto: true,
     ayuda: 'El nombre que va en la frente',
   },
+  mascota: {
+    etiqueta: 'Juguete y collar',
+    grupo: 'personal',
+    nivel: 2,
+    pideTexto: true,
+    ayuda: 'Cómo se llamaba tu perro',
+  },
 }
 
 export const NIVELES = [

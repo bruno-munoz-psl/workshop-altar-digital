@@ -180,6 +180,22 @@ export const ARTE = {
     </g>
     <path d="M38 24 q 12 -8 24 0" stroke="${AMARILLO}" stroke-width="4" fill="none" stroke-linecap="round"/>
   `),
+
+  // Juguete y collar. Para el perro que tambien regresa.
+  mascota: svg(`
+    <ellipse cx="50" cy="32" rx="30" ry="18" fill="none" stroke="${ROSA}" stroke-width="8"/>
+    <g fill="${CREMA}">
+      <circle cx="28" cy="22" r="2"/><circle cx="50" cy="14" r="2"/><circle cx="72" cy="22" r="2"/>
+    </g>
+    <rect x="15" y="26" width="10" height="12" rx="2" fill="none" stroke="${AMARILLO}" stroke-width="3"/>
+    <circle cx="50" cy="52" r="3" fill="none" stroke="${AMARILLO}" stroke-width="2"/>
+    <circle cx="50" cy="61" r="7" fill="${AMARILLO}"/>
+    <g fill="${CREMA}">
+      <rect x="26" y="77" width="48" height="10" rx="5"/>
+      <circle cx="25" cy="76" r="7"/><circle cx="25" cy="88" r="7"/>
+      <circle cx="75" cy="76" r="7"/><circle cx="75" cy="88" r="7"/>
+    </g>
+  `),
 }
 
 // Si algun dia alguien inventa un tipo nuevo y todavia no le dibuja arte,
