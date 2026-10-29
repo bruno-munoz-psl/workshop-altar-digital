@@ -27,9 +27,24 @@ const LLAVE_NOMBRE = 'ofrenda:nombre'
 // armar las rutas sin dobles //.
 const API = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 
-// El hostname identifica el altar: la misma URL abre el mismo altar en la
-// laptop y en el telefono.
-const altarId = window.location.hostname
+// El hostname identifica tu ofrenda principal: la misma URL abre el mismo
+// altar en la laptop y en el telefono.
+const ALTAR_BASE = window.location.hostname
+
+// Puedes tener varias ofrendas. Cada una es un altar con su propio altarId
+// (`<hostname>~<id>`), y la lista de ofrendas vive en otro altar, el
+// indice: cada ofrenda es un elemento de tipo 'ofrenda' con su nombre en
+// `texto`. Asi la lista se sincroniza entre dispositivos. La principal no
+// tiene entrada hasta que le cambias el nombre: ahi se crea una de tipo
+// 'principal' que solo guarda ese nombre.
+export const PRINCIPAL = 'principal'
+const INDICE = `${ALTAR_BASE}~ofrendas`
+
+const altarDe = (ofrenda) => (ofrenda === PRINCIPAL ? ALTAR_BASE : `${ALTAR_BASE}~${ofrenda}`)
+
+// La ofrenda que se ve va en la URL (#<id>), para que un link abra esa.
+let ofrenda = decodeURIComponent(window.location.hash.slice(1)) || PRINCIPAL
+let altarId = altarDe(ofrenda)
 
 /** Llama a la API y devuelve el JSON, o lanza un error que se puede leer. */
 async function pedir(ruta, opciones = {}) {
@@ -43,8 +58,11 @@ async function pedir(ruta, opciones = {}) {
   return datos
 }
 
-function enviar(cuerpo) {
-  return pedir('/elements', { method: 'POST', body: JSON.stringify({ altarId, ...cuerpo }) })
+function enviar(cuerpo, altar = altarId) {
+  return pedir('/elements', {
+    method: 'POST',
+    body: JSON.stringify({ altarId: altar, ...cuerpo }),
+  })
 }
 
 /** Sube una imagen a S3 con una URL firmada y devuelve su imageKey. */
@@ -62,8 +80,8 @@ async function subirImagen(blob) {
   return imageKey
 }
 
-async function traer() {
-  const { elementos } = await pedir(`/elements?altarId=${encodeURIComponent(altarId)}`)
+async function traer(altar = altarId) {
+  const { elementos } = await pedir(`/elements?altarId=${encodeURIComponent(altar)}`)
   return elementos
 }
 
@@ -116,6 +134,8 @@ async function cargarConImportacion() {
 
 /** Todos los elementos del altar, ordenados por cuando se pusieron. */
 export async function listar() {
+  // Lo de localStorage era de tu altar de siempre: solo se importa ahi.
+  if (ofrenda !== PRINCIPAL) return traer()
   if (!primeraCarga) {
     primeraCarga = cargarConImportacion().catch((err) => {
       // Si fallo, la siguiente llamada lo vuelve a intentar.
@@ -160,6 +180,65 @@ export async function urlDeImagen(elemento) {
   if (!elemento.imageKey) return elemento.imagenLocal || null
   const { url } = await pedir(`/uploads/${elemento.imageKey}`)
   return url
+}
+
+/** Cual ofrenda se esta viendo. */
+export function ofrendaActual() {
+  return ofrenda
+}
+
+/** Cambia de ofrenda. Lo que se liste, agregue o borre despues va a esa. */
+export function usarOfrenda(id) {
+  ofrenda = id
+  altarId = altarDe(id)
+  const hash = id === PRINCIPAL ? '' : `#${encodeURIComponent(id)}`
+  history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`)
+}
+
+/** Tus ofrendas: la principal primero y luego las que guardaste. */
+export async function ofrendas() {
+  const indice = await traer(INDICE)
+  const principal = indice.find((el) => el.tipo === 'principal')
+  return [
+    { id: PRINCIPAL, nombre: principal?.texto || 'Mi ofrenda' },
+    ...indice
+      .filter((el) => el.tipo === 'ofrenda')
+      .map((el) => ({ id: el.id, nombre: el.texto || 'Sin nombre' })),
+  ]
+}
+
+/** Le cambia el nombre a una ofrenda, la principal incluida. */
+export async function renombrarOfrenda(id, nombre) {
+  const texto = nombre.slice(0, 40)
+  let entrada = id
+  if (id === PRINCIPAL) {
+    const principal = (await traer(INDICE)).find((el) => el.tipo === 'principal')
+    if (!principal) {
+      await enviar({ tipo: 'principal', texto }, INDICE)
+      return
+    }
+    entrada = principal.id
+  }
+  await enviar({ editar: true, id: entrada, texto }, INDICE)
+}
+
+/** Guarda una ofrenda nueva, vacia, y devuelve { id, nombre }. */
+export async function crearOfrenda(nombre) {
+  const nueva = await enviar({ tipo: 'ofrenda', texto: nombre.slice(0, 40) }, INDICE)
+  return { id: nueva.id, nombre: nueva.texto }
+}
+
+/**
+ * Borra una ofrenda y todo lo que tenia puesto. Primero sus elementos y
+ * al final la entrada del indice: si algo falla a medias, la ofrenda sigue
+ * en la lista y se puede volver a intentar.
+ */
+export async function borrarOfrenda(id) {
+  if (id === PRINCIPAL) throw new Error('Tu ofrenda principal no se borra.')
+  const altar = altarDe(id)
+  const elementos = await traer(altar)
+  await Promise.all(elementos.map((el) => enviar({ borrar: true, id: el.id }, altar)))
+  await enviar({ borrar: true, id }, INDICE)
 }
 
 /** Quien esta poniendo cosas en el altar. Se pregunta una sola vez. */

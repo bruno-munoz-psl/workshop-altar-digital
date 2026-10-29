@@ -87,7 +87,7 @@ CloudWatch es esperada.
 | Método | Ruta | Lambda |
 | --- | --- | --- |
 | `GET` | `/elements?altarId=...` | `listar` |
-| `POST` | `/elements` | `agregar` (crear, borrar y reordenar) |
+| `POST` | `/elements` | `agregar` (crear, borrar, reordenar y editar) |
 | `POST` | `/uploads` | `subir` (firma de subida) |
 | `GET` | `/uploads/{proxy+}` | `subir` (firma de lectura) |
 
@@ -115,6 +115,8 @@ Cada handler devuelve `{ statusCode, headers, body }` con los headers de CORS
   cada `id` con un `Query` por `altarId`, actualiza `nivel` y `posicion` con
   `UpdateCommand` y responde `{ ordenados }`. La `sk` no cambia; el frontend
   ordena cada grada por `posicion` y desempata por `creadoEn`.
+  Si trae `editar: true` + `id` + `texto`, busca el item igual que al borrar,
+  actualiza solo `texto` y responde 200 con el elemento sin `sk`.
 - **`subir`**: crea `S3Client` con
   `requestChecksumCalculation: 'WHEN_REQUIRED'`, para no firmar el checksum de
   un cuerpo vacío en la URL de `PUT`. Si es `GET`, firma un `GetObjectCommand`

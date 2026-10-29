@@ -1,7 +1,8 @@
 // POST /elements
 //
-// Crea un elemento, lo borra si el cuerpo trae { borrar: true, id }, o
-// reordena el altar si trae { ordenar: [{ id, nivel, posicion }, ...] }.
+// Crea un elemento, lo borra si el cuerpo trae { borrar: true, id },
+// reordena el altar si trae { ordenar: [{ id, nivel, posicion }, ...] }, o
+// cambia su texto si trae { editar: true, id, texto }.
 // La API pone id, creadoEn, posicion y sk: no confia en lo que mande el
 // cliente para ninguno de los cuatro.
 
@@ -69,6 +70,27 @@ async function borrar(altarId, id) {
 
   await db.send(new DeleteCommand({ TableName: TABLA, Key: { altarId, sk: item.sk } }))
   return responder(200, { borrado: id })
+}
+
+/** Cambia el texto de un elemento que ya existe. Lo demas no se toca. */
+async function editar(altarId, id, texto) {
+  if (!id) return responder(400, { error: 'Falta el id a editar' })
+  if (typeof texto !== 'string') return responder(400, { error: 'Falta texto' })
+
+  const [item] = await consultar(altarId, '#id = :id', { ':id': id }, { '#id': 'id' })
+  if (!item) return responder(404, { error: 'Ese elemento no está en este altar' })
+
+  const nuevo = texto.slice(0, CAMPOS.texto)
+  await db.send(
+    new UpdateCommand({
+      TableName: TABLA,
+      Key: { altarId, sk: item.sk },
+      UpdateExpression: 'SET texto = :texto',
+      ExpressionAttributeValues: { ':texto': nuevo },
+    })
+  )
+  const { sk, ...elemento } = item
+  return responder(200, { ...elemento, texto: nuevo })
 }
 
 /**
@@ -140,6 +162,7 @@ export async function handler(event) {
   if (!cuerpo.altarId) return responder(400, { error: 'Falta altarId' })
 
   if (cuerpo.borrar === true) return borrar(cuerpo.altarId, cuerpo.id)
+  if (cuerpo.editar === true) return editar(cuerpo.altarId, cuerpo.id, cuerpo.texto)
   if (Array.isArray(cuerpo.ordenar)) return ordenar(cuerpo.altarId, cuerpo.ordenar)
   return crear(cuerpo.altarId, cuerpo)
 }

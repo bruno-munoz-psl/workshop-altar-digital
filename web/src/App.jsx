@@ -9,7 +9,9 @@ import { useState } from 'react'
 import { TIPOS, necesitaPanel } from './catalogo/elementos.js'
 import { useAltar } from './hooks/useAltar.js'
 import { useNombre } from './hooks/useNombre.js'
+import { useOfrendas } from './hooks/useOfrendas.js'
 import Encabezado from './componentes/layout/Encabezado.jsx'
+import MenuDeOfrendas from './componentes/layout/MenuDeOfrendas.jsx'
 import BannerDeModo from './componentes/layout/BannerDeModo.jsx'
 import PieDePagina from './componentes/layout/PieDePagina.jsx'
 import Altar from './componentes/altar/Altar.jsx'
@@ -19,7 +21,8 @@ import AltarCargando from './componentes/estado/AltarCargando.jsx'
 import AvisoDeError from './componentes/estado/AvisoDeError.jsx'
 
 export default function App() {
-  const altar = useAltar()
+  const ofrendas = useOfrendas()
+  const altar = useAltar(ofrendas.actual)
   const { nombre, guardar, comoFirma } = useNombre()
 
   // Que tipo tiene el panel abierto y en que grada, o null si se ve la
@@ -50,6 +53,17 @@ export default function App() {
 
   return (
     <>
+      <MenuDeOfrendas
+        lista={ofrendas.lista}
+        actual={ofrendas.actual}
+        nombreActual={ofrendas.nombreActual}
+        error={ofrendas.error}
+        principal={ofrendas.principal}
+        onElegir={ofrendas.elegir}
+        onCrear={ofrendas.crear}
+        onBorrar={ofrendas.borrar}
+        onRenombrar={ofrendas.renombrar}
+      />
       <Encabezado nombre={nombre} onNombre={guardar} />
       <BannerDeModo modo={altar.modo} />
 

@@ -25,7 +25,8 @@ async function urlesDe(elementos) {
   return new Map(elementos.map((el, i) => [el.id, urls[i]]).filter(([, url]) => url))
 }
 
-export function useAltar() {
+/** `ofrenda` es la que se esta viendo; al cambiar, el altar se vuelve a traer. */
+export function useAltar(ofrenda) {
   const [elementos, setElementos] = useState([])
   const [imagenes, setImagenes] = useState(new Map())
   const [cargando, setCargando] = useState(true)
@@ -44,26 +45,36 @@ export function useAltar() {
   }, [])
 
   const refrescar = useCallback(async () => {
+    // Si cambias de ofrenda mientras esta llega, la respuesta vieja se
+    // tira: si no, podria pintar el altar de la ofrenda anterior.
+    const pedida = almacen.ofrendaActual()
+    const sigueSiendo = () => almacen.ofrendaActual() === pedida
     try {
       setError(null)
       const lista = await almacen.listar()
+      const urls = await urlesDe(lista)
+      if (!sigueSiendo()) return
       setElementos(lista)
-      setImagenes(await urlesDe(lista))
+      setImagenes(urls)
     } catch (err) {
-      setError(err.message || 'No pude leer el altar.')
+      if (sigueSiendo()) setError(err.message || 'No pude leer el altar.')
     } finally {
-      setCargando(false)
+      if (sigueSiendo()) setCargando(false)
     }
   }, [])
 
   useEffect(() => {
+    setCargando(true)
     refrescar()
+  }, [refrescar, ofrenda])
+
+  useEffect(() => {
     // Al desmontar, soltar cualquier object URL que quedara viva.
     return () => {
       for (const url of temporales.current) URL.revokeObjectURL(url)
       temporales.current.clear()
     }
-  }, [refrescar])
+  }, [])
 
   const cuantosEn = useCallback(
     (nivel) => elementos.filter((el) => el.nivel === nivel).length,
