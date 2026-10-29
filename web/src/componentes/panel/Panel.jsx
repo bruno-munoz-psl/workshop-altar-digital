@@ -9,12 +9,14 @@ import { useEffect, useRef, useState } from 'react'
 import { TIPOS, NIVELES } from '../../catalogo/elementos.js'
 import SelectorDeGrada from './SelectorDeGrada.jsx'
 
-export default function Panel({ tipo, nivelLleno, cuantosEn, onPoner, onCancelar }) {
+export default function Panel({ tipo, nivelInicial, nivelLleno, cuantosEn, onPoner, onCancelar }) {
   const info = TIPOS[tipo]
+  // La grada donde lo soltaste, o su grada natural si le picaste.
+  const preferido = nivelInicial ?? info.nivel
   const [texto, setTexto] = useState('')
   const [link, setLink] = useState('')
   const [imagen, setImagen] = useState(null)
-  const [nivel, setNivel] = useState(info.nivel)
+  const [nivel, setNivel] = useState(preferido)
   const [guardando, setGuardando] = useState(false)
   const primerCampo = useRef(null)
 
@@ -24,14 +26,14 @@ export default function Panel({ tipo, nivelLleno, cuantosEn, onPoner, onCancelar
     primerCampo.current?.focus()
   }, [tipo])
 
-  // Si la grada natural de esta cosa esta llena, el panel abre apuntando a
-  // una que si tenga lugar, en vez de abrir en un error.
+  // Si la grada preferida esta llena, el panel abre apuntando a una que si
+  // tenga lugar, en vez de abrir en un error.
   useEffect(() => {
-    if (nivelLleno(info.nivel)) {
+    if (nivelLleno(preferido)) {
       const libre = NIVELES.find((n) => !nivelLleno(n.nivel))
       if (libre) setNivel(libre.nivel)
     }
-  }, [tipo, info.nivel, nivelLleno])
+  }, [tipo, preferido, nivelLleno])
 
   async function alEnviar(evento) {
     evento.preventDefault()

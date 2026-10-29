@@ -145,6 +145,11 @@ export async function borrar(id) {
   await enviar({ borrar: true, id })
 }
 
+/** Guarda la grada y la posicion nuevas: [{ id, nivel, posicion }, ...]. */
+export async function ordenar(cambios) {
+  await enviar({ ordenar: cambios })
+}
+
 /**
  * De donde sale la imagen de un elemento.
  *

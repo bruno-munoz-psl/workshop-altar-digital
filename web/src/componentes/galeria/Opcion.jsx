@@ -24,6 +24,14 @@ export default function Opcion({ tipo, info, lleno, onElegir }) {
         title={titulo}
         aria-label={titulo}
         onClick={() => onElegir(tipo)}
+        // Tambien se puede arrastrar a la grada que quieras. Picarle sigue
+        // funcionando igual, que es lo que queda en el telefono y con
+        // teclado.
+        draggable={!lleno}
+        onDragStart={(evento) => {
+          evento.dataTransfer.setData('text/plain', tipo)
+          evento.dataTransfer.effectAllowed = 'copy'
+        }}
       >
         <span
           className="opcion-arte"

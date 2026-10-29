@@ -22,7 +22,7 @@ import { arteDe } from '../../catalogo/arte.js'
 import { idDeCancion, urlDelReproductor } from '../../lib/spotify.js'
 import { linkSeguro } from '../../lib/enlaces.js'
 
-export default function Elemento({ elemento, urlImagen, onQuitar }) {
+export default function Elemento({ elemento, urlImagen, onQuitar, onArrastrar, marcado }) {
   const etiqueta = etiquetaDe(elemento.tipo)
   const link = linkSeguro(elemento.link)
   const cancion = link ? idDeCancion(link) : null
@@ -30,9 +30,23 @@ export default function Elemento({ elemento, urlImagen, onQuitar }) {
   const clases = ['elemento']
   if (cancion) clases.push('elemento-ancho')
   if (elemento.pendiente) clases.push('elemento-pendiente')
+  if (marcado) clases.push('elemento-marcado')
 
   return (
-    <li className={clases.join(' ')} data-tipo={elemento.tipo}>
+    <li
+      className={clases.join(' ')}
+      data-tipo={elemento.tipo}
+      data-id={elemento.id}
+      // Uno que todavia se esta guardando no tiene id de verdad: no se mueve.
+      draggable={!elemento.pendiente}
+      onDragStart={(evento) => {
+        evento.dataTransfer.effectAllowed = 'move'
+        // Firefox no arrastra nada si no hay ningun dato puesto.
+        evento.dataTransfer.setData('text/x-elemento', elemento.id)
+        onArrastrar(elemento)
+      }}
+      onDragEnd={() => onArrastrar(null)}
+    >
       <div className="elemento-figura">
         {urlImagen ? (
           <img src={urlImagen} alt={elemento.texto || etiqueta} loading="lazy" />

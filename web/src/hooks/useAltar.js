@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as almacen from '../datos/almacen.js'
-import { CUPO_POR_NIVEL } from '../catalogo/elementos.js'
+import { CUPO_POR_NIVEL, enOrden } from '../catalogo/elementos.js'
 
 /** Resuelve la imagen de cada elemento a la vez, no una tras otra. */
 async function urlesDe(elementos) {
@@ -150,6 +150,48 @@ export function useAltar() {
     [elementos],
   )
 
+  /**
+   * Mueve un elemento a otra posicion, en su grada o en otra. Como agregar
+   * y quitar, cambia la pantalla de inmediato y se revierte si falla.
+   *
+   * `antesDe` es el id del elemento frente al que se solto, o null para
+   * dejarlo al final de la grada.
+   */
+  const mover = useCallback(
+    async (id, nivel, antesDe) => {
+      const anterior = elementos
+      const movido = elementos.find((el) => el.id === id)
+      if (!movido || id === antesDe) return
+
+      // La grada de destino sin el que se mueve, y el movido en su lugar.
+      const destino = enOrden(elementos, nivel).filter((el) => el.id !== id)
+      const indice = destino.findIndex((el) => el.id === antesDe)
+      destino.splice(indice === -1 ? destino.length : indice, 0, { ...movido, nivel })
+
+      // Se renumeran las dos gradas que cambiaron: la de destino y, si es
+      // otra, la de origen, que se queda con un hueco.
+      const renumeradas = destino.map((el, posicion) => ({ ...el, posicion }))
+      if (movido.nivel !== nivel) {
+        enOrden(elementos, movido.nivel)
+          .filter((el) => el.id !== id)
+          .forEach((el, posicion) => renumeradas.push({ ...el, posicion }))
+      }
+
+      const cambiados = new Map(renumeradas.map((el) => [el.id, el]))
+      setElementos((prev) => prev.map((el) => cambiados.get(el.id) || el))
+      setError(null)
+      try {
+        await almacen.ordenar(
+          renumeradas.map(({ id, nivel, posicion }) => ({ id, nivel, posicion })),
+        )
+      } catch (err) {
+        setElementos(anterior)
+        setError(err.message || 'No pude mover eso.')
+      }
+    },
+    [elementos],
+  )
+
   return {
     elementos,
     imagenes,
@@ -159,6 +201,7 @@ export function useAltar() {
     setAviso,
     agregar,
     quitar,
+    mover,
     cuantosEn,
     nivelLleno,
     refrescar,

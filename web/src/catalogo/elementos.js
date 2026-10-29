@@ -109,6 +109,17 @@ export function necesitaPanel(tipo) {
 
 export const CUPO_POR_NIVEL = 6
 
+/**
+ * Los elementos de una grada en el orden en que se ven: por `posicion`, y
+ * si dos empatan (o uno todavia no tiene), por cuando se pusieron.
+ */
+export function enOrden(elementos, nivel) {
+  const pos = (el) => el.posicion ?? Infinity
+  return elementos
+    .filter((el) => el.nivel === nivel)
+    .sort((a, b) => pos(a) - pos(b) || a.creadoEn.localeCompare(b.creadoEn))
+}
+
 // El altar no arranca vacio. Esto es un set tradicional tipico, para que
 // desde el primer deploy se vea vestido y nadie empiece en una pagina
 // en blanco. Se puede borrar elemento por elemento.

@@ -22,20 +22,22 @@ export default function App() {
   const altar = useAltar()
   const { nombre, guardar, comoFirma } = useNombre()
 
-  // Que tipo tiene el panel abierto, o null si se ve la galeria.
+  // Que tipo tiene el panel abierto y en que grada, o null si se ve la
+  // galeria.
   const [eligiendo, setEligiendo] = useState(null)
 
-  // Lo que no pide ningun dato cae directo a su grada natural. La galeria
-  // ya apaga el boton cuando esa grada esta llena, asi que aqui no puede
-  // llegar un tipo sin lugar.
-  async function elegir(tipo) {
+  // Al picarle, la cosa va a su grada natural; al arrastrarla, a la grada
+  // donde se solto. Lo que no pide ningun dato cae directo. La galeria
+  // apaga el boton si la grada natural esta llena, y una grada llena no
+  // acepta que le suelten nada, asi que aqui no llega un tipo sin lugar.
+  async function elegir(tipo, nivel = TIPOS[tipo].nivel) {
     if (necesitaPanel(tipo)) {
-      setEligiendo(tipo)
+      setEligiendo({ tipo, nivel })
       return
     }
     await altar.agregar({
       tipo,
-      nivel: TIPOS[tipo].nivel,
+      nivel,
       texto: '',
       link: '',
       puestoPor: comoFirma,
@@ -61,13 +63,18 @@ export default function App() {
             elementos={altar.elementos}
             imagenes={altar.imagenes}
             onQuitar={altar.quitar}
+            onSoltar={elegir}
+            onMover={altar.mover}
           />
         )}
 
         <aside>
           {eligiendo ? (
             <Panel
-              tipo={eligiendo}
+              // La key reinicia el panel si sueltas otra cosa con uno abierto.
+              key={`${eligiendo.tipo}-${eligiendo.nivel}`}
+              tipo={eligiendo.tipo}
+              nivelInicial={eligiendo.nivel}
               nivelLleno={altar.nivelLleno}
               cuantosEn={altar.cuantosEn}
               onPoner={poner}

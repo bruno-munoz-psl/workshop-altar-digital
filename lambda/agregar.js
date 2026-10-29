@@ -1,6 +1,7 @@
 // POST /elements
 //
-// Crea un elemento, o lo borra si el cuerpo trae { borrar: true, id }.
+// Crea un elemento, lo borra si el cuerpo trae { borrar: true, id }, o
+// reordena el altar si trae { ordenar: [{ id, nivel, posicion }, ...] }.
 // La API pone id, creadoEn, posicion y sk: no confia en lo que mande el
 // cliente para ninguno de los cuatro.
 
@@ -11,10 +12,14 @@ import {
   DynamoDBDocumentClient,
   PutCommand,
   QueryCommand,
+  UpdateCommand,
 } from '@aws-sdk/lib-dynamodb'
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}))
 const TABLA = process.env.TABLA
+
+// Cuantos cambios acepta un reordenamiento: tres gradas de seis.
+const MAX_ORDENAR = 18
 
 // Lo unico que se acepta del cliente, con su largo maximo.
 const CAMPOS = { tipo: 40, texto: 280, link: 500, puestoPor: 40, imageKey: 200 }
@@ -66,6 +71,40 @@ async function borrar(altarId, id) {
   return responder(200, { borrado: id })
 }
 
+/**
+ * Cambia la grada y la posicion de elementos que ya existen.
+ *
+ * La sk no cambia (es la llave y lleva la fecha de creacion); el orden en
+ * pantalla sale de `posicion`. Los ids que no son de este altar se ignoran.
+ */
+async function ordenar(altarId, cambios) {
+  if (cambios.length > MAX_ORDENAR) return responder(400, { error: 'Demasiados cambios' })
+  const validos = cambios.filter(
+    (c) => typeof c?.id === 'string' && Number.isInteger(c.nivel) && Number.isInteger(c.posicion)
+  )
+  if (validos.length !== cambios.length) {
+    return responder(400, { error: 'Cada cambio lleva id, nivel y posicion' })
+  }
+
+  const skDe = new Map((await consultar(altarId)).map((item) => [item.id, item.sk]))
+  const aplicables = validos.filter((c) => skDe.has(c.id))
+
+  await Promise.all(
+    aplicables.map((c) =>
+      db.send(
+        new UpdateCommand({
+          TableName: TABLA,
+          Key: { altarId, sk: skDe.get(c.id) },
+          UpdateExpression: 'SET #nivel = :nivel, #posicion = :posicion',
+          ExpressionAttributeNames: { '#nivel': 'nivel', '#posicion': 'posicion' },
+          ExpressionAttributeValues: { ':nivel': c.nivel, ':posicion': c.posicion },
+        })
+      )
+    )
+  )
+  return responder(200, { ordenados: aplicables.length })
+}
+
 async function crear(altarId, cuerpo) {
   if (!cuerpo.tipo) return responder(400, { error: 'Falta tipo' })
 
@@ -100,5 +139,7 @@ export async function handler(event) {
 
   if (!cuerpo.altarId) return responder(400, { error: 'Falta altarId' })
 
-  return cuerpo.borrar === true ? borrar(cuerpo.altarId, cuerpo.id) : crear(cuerpo.altarId, cuerpo)
+  if (cuerpo.borrar === true) return borrar(cuerpo.altarId, cuerpo.id)
+  if (Array.isArray(cuerpo.ordenar)) return ordenar(cuerpo.altarId, cuerpo.ordenar)
+  return crear(cuerpo.altarId, cuerpo)
 }

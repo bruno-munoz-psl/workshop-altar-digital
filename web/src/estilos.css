@@ -174,6 +174,22 @@ main {
   border: 2px solid var(--borde);
   border-radius: var(--radio);
   padding: 0.9rem 1.1rem 1.7rem;
+  transition: border-color 0.14s ease;
+}
+
+/* La grada sobre la que vas a soltar algo. */
+.nivel-destino {
+  border-color: var(--naranja);
+  border-style: dashed;
+}
+
+.elemento[draggable='true'] {
+  cursor: grab;
+}
+
+/* Lo que arrastras cae frente a este: una raya naranja a su izquierda. */
+.elemento-marcado {
+  box-shadow: -6px 0 0 var(--naranja);
 }
 
 /* La hilera de petalos de cempasuchil que remata la grada por abajo, como
